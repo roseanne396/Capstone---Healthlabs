@@ -1,0 +1,10 @@
+streamlit
+pandas
+langchain-core
+langchain-openai
+langchain-community
+openai
+requests
+bs4
+beautifulsoup4
+chroma-db
