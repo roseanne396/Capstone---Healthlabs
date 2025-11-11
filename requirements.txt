@@ -7,4 +7,4 @@ openai
 requests
 bs4
 beautifulsoup4
-chroma-db
+chroma-client
