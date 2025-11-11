@@ -654,8 +654,10 @@ def reset_pipeline_2_state():
 # Button 1: Reset Global API Key (Resets API for both pipelines)
 if st.sidebar.button("Reset API Key", type="secondary", key='global_api_reset'):
     st.session_state.api_key = ""
-    if 'global_api_key_input' in st.session_state:
-        st.session_state['global_api_key_input'] = ""
+    # --- FIX APPLIED HERE: REMOVE THE LINE THAT ATTEMPTS TO WRITE TO WIDGET KEY ---
+    # if 'global_api_key_input' in st.session_state:
+    #     st.session_state['global_api_key_input'] = ""
+    # -------------------------------------------------------------------------------
     st.rerun()
 
 # Button 2: Reset Active Pipeline
