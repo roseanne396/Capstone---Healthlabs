@@ -7,4 +7,5 @@ openai
 requests
 bs4
 beautifulsoup4
-chroma
+chromadb==1.1.1
+langchain-chroma==1.0.0
