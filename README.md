@@ -17,7 +17,7 @@ This project aims to automate and enhance this process, providing a scalable and
 
 We use a **Retrieval-Augmented Generation (RAG)** system to analyze internal company and product data. This system leverages Large Language Models (LLMs) to identify partnership candidates that a human expert might miss.
 
-By processing our data with a **HYDE (Hypothetical Document Embeddings)** method, the system becomes highly effective at "imagining" what an ideal answer looks like, which allows it to retrieve the most relevant information for generating partnership insights.
+By processing our data with a **HyDE (Hypothetical Document Embeddings)** method, the system becomes highly effective at "imagining" what an ideal answer looks like, which allows it to retrieve the most relevant information for generating partnership insights.
 
 The end result is a system that generates **potential synergy pair candidates** and provides **clear reasoning** for each recommendation, dramatically accelerating the strategic partnership workflow.
 
