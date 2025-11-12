@@ -2,7 +2,7 @@
 
 ## Project Goal
 
-The primary goal of this capstone project is to **detect and evaluate synergistic partnership opportunities among digital health companies**.
+The primary goal of this capstone project is to **detect and evaluate synergistic partnership opportunities among digital health companies and products**.
 
 ## The Challenge
 
