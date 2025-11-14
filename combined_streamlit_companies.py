@@ -24,7 +24,9 @@ LOCAL_DATA_FILE = "data/merged_data.csv"
 CHROMA_DB_PATH = "chroma_db"
 # --- NEW: Separate path for the PRODUCT-level vector store ---
 CHROMA_COMPANY_DB_PATH = "chroma_company_db"
-# -----------------------------------------------------------
+# --- NEW: Feedback file path ---
+# <-- MODIFIED: Removed the FEEDBACK_FILE line. We don't need it.
+# -------------------------------
 
 # --- NEW: MODEL CONFIGURATION ---
 MODEL_CONFIG = {
@@ -377,6 +379,33 @@ def get_external_data_snippets(website_url: str) -> str:
     except Exception as e:
         return f"*** EXTERNAL WEB DATA (FAILURE) ***\nAn unexpected error occurred during parsing: {e}"
 
+# --- NEW: Feedback Saving Function (Google Sheets) ---
+# <-- MODIFIED: This function is completely new and replaces the old one.
+def save_feedback(feedback_data: dict):
+    """Appends a dictionary of feedback to the Google Sheet."""
+    try:
+        # Convert the dict to a DataFrame.
+        # The dict keys MUST match the Google Sheet headers from Step 1.
+        df = pd.DataFrame([feedback_data]) 
+        
+        # Establish the connection to Google Sheets
+        # This uses the secrets you set up in [connections.gsheets]
+        conn = st.connection("gsheets", type="gsheets")
+        
+        # Append the DataFrame (new row) to the sheet.
+        # "worksheet" is the name of the tab in your Sheet (default is "Sheet1").
+        conn.append(
+            worksheet="Sheet1",
+            data=df,
+            # We don't want to add the headers every time, just the data
+            header=False 
+        )
+        return True
+    except Exception as e:
+        # Log the error to the Streamlit console for debugging
+        st.error(f"Error saving feedback to Google Sheets: {e}")
+        return False
+
 # ==============================================================================
 # SECTION 2: LLM CHAIN DEFINITIONS (P1 & P2)
 # ==============================================================================
@@ -702,7 +731,7 @@ In a detailed, bullet-pointed list, identify potential risks or challenges in th
 **4. Seven-Axis Synergy Scores:**
 Provide a score from 1 (low synergy) to 10 (high synergy) for each of the following seven axes. For each score, provide a brief justification based on the provided data.
 - **Clinical & Operational Alignment:** <Score and Justification> (Considers clinical pathways, TAT, and disease specificity match)
-- **Patient Experience & Journey Continuity:** <Score and Justification> (Considers care continuity and patient drop-off risk)
+- **Patient Experience & Journey Continuity:** <Score andJustification> (Considers care continuity and patient drop-off risk)
 - **Financial & Reimbursement Compatibility:** <Score and Justification> (Considers insurance coverage and out-of-pocket cost alignment)
 - **Technological Interoperability:** <Score and Justification> (Considers APIs, EHR/EMR systems, and data standards)
 - **Regulatory & Compliance Alignment:** <Score and Justification> (Considers overlap in regulatory pathways and certifications)
@@ -1437,3 +1466,62 @@ elif st.session_state.page == 'p2':
             f'<div class="output-box-readable">{output_content}</div>',
             unsafe_allow_html=True
         )
+
+        # --- NEW FEEDBACK SECTION ---
+        st.markdown("---")
+        st.subheader("📊 Rate This Analysis")
+        
+        with st.form(key="feedback_form"):
+            # Get context from the analysis that was run
+            analysis_context = st.session_state.collected_data_p2
+            
+            # Get product/company names from the session state keys used to run the analysis
+            product_1 = st.session_state.get('product_1_select_p2', 'Unknown Product 1')
+            company_1 = st.session_state.get('p2_company_1_select', 'Unknown Company 1')
+            product_2 = st.session_state.get('product_2_select_p2', 'Unknown Product 2')
+            company_2 = st.session_state.get('p2_company_2_select', 'Unknown Company 2')
+
+            # Get mode and model from the stored analysis data
+            mode = analysis_context.get('mode', 'Unknown Mode')
+            model_name = analysis_context.get('model_name', 'Unknown Model')
+
+            # Sliders
+            usefulness_score = st.slider(
+                "Usefulness of Analysis",
+                min_value=1, max_value=10, value=7, key="fb_usefulness"
+            )
+            specificity_score = st.slider(
+                "Specificity of Analysis",
+                min_value=1, max_value=10, value=7, key="fb_specificity"
+            )
+            actionability_score = st.slider(
+                "Actionability of Insights",
+                min_value=1, max_value=10, value=7, key="fb_actionability"
+            )
+
+            # Submit Button
+            submitted = st.form_submit_button("Submit Feedback")
+
+            if submitted:
+                # <-- MODIFIED: This dictionary is now "flat" to match the GSheet headers
+                feedback_data = {
+                    "timestamp": pd.Timestamp.now().isoformat(),
+                    "model_used": model_name,
+                    "analysis_mode": mode,
+                    "product_1": product_1,
+                    "company_1": company_1,
+                    "product_2": product_2,
+                    "company_2": company_2,
+                    "score_usefulness": usefulness_score,
+                    "score_specificity": specificity_score,
+                    "score_actionability": actionability_score,
+                    "full_report": st.session_state.analysis_report_p2
+                }
+                
+                # Call the new save function
+                if save_feedback(feedback_data):
+                    st.success("Thank you for your feedback! It has been recorded.")
+                else:
+                    st.error("There was an error saving your feedback. Check app logs.")
+        # --- END NEW FEEDBACK SECTION ---
+}
