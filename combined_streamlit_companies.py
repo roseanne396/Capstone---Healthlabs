@@ -17,6 +17,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate
+from streamlit_gsheets import GSheetsConnection
 
 
 # --- CONFIGURATION ---
@@ -390,7 +391,7 @@ def save_feedback(feedback_data: dict):
         
         # Establish the connection to Google Sheets
         # This uses the secrets you set up in [connections.gsheets]
-        conn = st.connection("gsheets", type="gsheets")
+        conn = st.connection("gsheets", type=GSheetsConnection)
         
         # Append the DataFrame (new row) to the sheet.
         # "worksheet" is the name of the tab in your Sheet (default is "Sheet1").
