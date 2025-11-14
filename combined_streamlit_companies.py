@@ -1524,4 +1524,3 @@ elif st.session_state.page == 'p2':
                 else:
                     st.error("There was an error saving your feedback. Check app logs.")
         # --- END NEW FEEDBACK SECTION ---
-}
