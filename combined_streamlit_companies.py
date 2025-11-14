@@ -380,41 +380,50 @@ def get_external_data_snippets(website_url: str) -> str:
     except Exception as e:
         return f"*** EXTERNAL WEB DATA (FAILURE) ***\nAn unexpected error occurred during parsing: {e}"
 
-# --- NEW: Feedback Saving Function (Google Sheets) ---
+# --- NEW: Feedback Saving Function (using gspread directly) ---
 def save_feedback(feedback_data: dict):
     """Appends a dictionary of feedback to the Google Sheet."""
     try:
         # 1. Convert the dictionary to a DataFrame
         df = pd.DataFrame([feedback_data]) 
         
-        # 2. Establish the connection
-        conn = st.connection("gsheets", type=GSheetsConnection)
+        # 2. Get all credentials from the [gspread_auth] section of secrets
+        creds = st.secrets["gspread_auth"]
         
-        # --- THIS IS THE CORRECT LOGIC ---
+        # 3. Authenticate with gspread
+        gc = gspread.service_account_from_dict(creds)
         
-        # 3. Get the Spreadsheet URL and Worksheet name from your secrets
-        ss_url = conn._secrets.get("spreadsheet")
-        worksheet_name = conn._secrets.get("worksheet")
+        # 4. Get the Spreadsheet URL and Worksheet name
+        ss_url = creds.get("spreadsheet")
+        
+        # --- THIS IS THE TYPO FIX ---
+        worksheet_name = creds.get("worksheet") # Was "workskey"
         
         if not ss_url:
             st.error("GSheets Error: 'spreadsheet' URL is not set in secrets!")
             return False
         if not worksheet_name:
+            # --- THIS ERROR MESSAGE IS ALSO FIXED ---
             st.error("GSheets Error: 'worksheet' name is not set in secrets!")
             return False
 
-        # 4. Use the underlying gspread client (conn.client) to open the sheet
-        #    This client was authenticated by your secrets.
-        worksheet = conn.client.open_by_url(ss_url).worksheet(worksheet_name)
+        # 5. Open the Google Sheet by URL and select the worksheet
+        worksheet = gc.open_by_url(ss_url).worksheet(worksheet_name)
         
-        # 5. Convert the DataFrame row to a simple list for appending
+        # 6. Convert the DataFrame row to a simple list for appending
         row_to_append = df.values.tolist()[0]
         
-        # 6. Use the gspread .append_row() method to add the data
+        # 7. Use the gspread .append_row() method to add the data
         worksheet.append_row(row_to_append)
         
         return True
     
+    except gspread.exceptions.APIError as e:
+        if "PERMISSION_DENIED" in str(e):
+             st.error("GSheets Error: PERMISSION DENIED. Have you shared your Google Sheet with the client_email?")
+        else:
+             st.error(f"GSheets API Error: {e}")
+        return False
     except Exception as e:
         # Log the error to the Streamlit console for debugging
         st.error(f"Error saving feedback to Google Sheets: {e}")
