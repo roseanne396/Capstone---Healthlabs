@@ -381,26 +381,34 @@ def get_external_data_snippets(website_url: str) -> str:
         return f"*** EXTERNAL WEB DATA (FAILURE) ***\nAn unexpected error occurred during parsing: {e}"
 
 # --- NEW: Feedback Saving Function (Google Sheets) ---
-# <-- MODIFIED: This function is completely new and replaces the old one.
+# <-- MODIFIED: This function now uses the gspread client to append.
 def save_feedback(feedback_data: dict):
     """Appends a dictionary of feedback to the Google Sheet."""
     try:
         # Convert the dict to a DataFrame.
-        # The dict keys MUST match the Google Sheet headers from Step 1.
         df = pd.DataFrame([feedback_data]) 
-        
+
         # Establish the connection to Google Sheets
-        # This uses the secrets you set up in [connections.gsheets]
         conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        # Append the DataFrame (new row) to the sheet.
-        # "worksheet" is the name of the tab in your Sheet (default is "Sheet1").
-        conn.append(
-            worksheet="Sheet1",
-            data=df,
-            # We don't want to add the headers every time, just the data
-            header=False 
-        )
+
+        # --- THIS IS THE FIX ---
+        # 1. Get the spreadsheet URL from the secrets (conn.config)
+        ss_url = conn.config.get("spreadsheet")
+        if not ss_url:
+            st.error("GSheets Error: 'spreadsheet' URL is not set in secrets!")
+            return False
+
+        # 2. Open the Google Sheet by URL and select the first worksheet (Sheet1)
+        #    (conn.client is the underlying gspread.Client)
+        worksheet = conn.client.open_by_url(ss_url).sheet1
+
+        # 3. Convert the DataFrame row to a list
+        #    .values.tolist()[0] gets the first (and only) row as a list
+        row_to_append = df.values.tolist()[0]
+
+        # 4. Append the list as a new row in the worksheet
+        worksheet.append_row(row_to_append)
+
         return True
     except Exception as e:
         # Log the error to the Streamlit console for debugging
