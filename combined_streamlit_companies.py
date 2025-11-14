@@ -393,7 +393,7 @@ def save_feedback(feedback_data: dict):
 
         # --- THIS IS THE FIX ---
         # 1. Get the spreadsheet URL from the secrets (conn.config)
-        ss_url = conn.config.get("spreadsheet")
+        ss_url = conn._secrets.get("spreadsheet")
         if not ss_url:
             st.error("GSheets Error: 'spreadsheet' URL is not set in secrets!")
             return False
