@@ -1,4 +1,9 @@
 import streamlit as st
+
+st.write("🔍 Debugging private key:")
+st.code(st.secrets["gspread_auth"]["private_key"][:200])
+
+import streamlit as st
 import pandas as pd
 import json
 import os
