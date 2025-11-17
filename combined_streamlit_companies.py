@@ -474,13 +474,30 @@ def define_llm_chains_p1(api_key, num_angles, model_name):
 
     # --- LLM 2: The Profiler (PROMPT UPDATED from pipeline1_streamlit.py) ---
     profiler_prompt_template = """
-    You are a brilliant business strategist. Based on the following 'Partnership Strategy', generate a rich, abstract profile of an ideal partner product.
-    Do not invent a name for a product. Describe its features, target users, and core value proposition in detail.
+    You are creating a short, embedding-friendly profile of an ideal partner PRODUCT TYPE.
+
+    Your goal: describe the essence of the ideal partner in a **compact, factual, and keyword-rich way**, so it can be used for vector search. Avoid storytelling or long paragraphs.
+
+    Use **bullet points**, and keep the total length under **250 words**.
+
     --- PARTNERSHIP STRATEGY ---
     {strategy_description}
-    --- TARGET PRODUCT ---
+
+    --- TARGET PRODUCT (for context only) ---
     {target_doc}
+
+    --- OUTPUT FORMAT (STRICT) ---
+    Return ONLY bullet points in this exact structure (no extra text):
+
+    - Product category: <short phrase>
+    - Clinical focus / condition area: <keywords>
+    - Target users: <roles, e.g. endocrinologists, PCPs, patients with type 2 diabetes>
+    - Data sources: <EHR, claims, lab results, imaging, wearable data, etc.>
+    - Key functionalities: <comma-separated functional keywords>
+    - Tech stack / integration: <APIs, EHR integration, HL7/FHIR, mobile app, cloud platform, etc.>
+    - Typical customers / settings: <hospitals, payers, employers, digital clinics, etc.>
     """
+
     profiler_prompt = ChatPromptTemplate.from_template(profiler_prompt_template)
     profiler_chain = profiler_prompt | llm | StrOutputParser()
 
