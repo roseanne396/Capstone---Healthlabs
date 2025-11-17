@@ -17,7 +17,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate
-from st_gsheets_connection import GSheetsConnection
+from streamlit_gsheets import GSheetsConnection
 import gspread
 from google.oauth2.service_account import Credentials
 
