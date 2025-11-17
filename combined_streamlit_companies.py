@@ -29,6 +29,7 @@ CHROMA_COMPANY_DB_PATH = "chroma_company_db"
 # --- NEW: Feedback file path ---
 # <-- MODIFIED: Removed the FEEDBACK_FILE line. We don't need it.
 # -------------------------------
+NUM_HYDE_QUERIES_PER_PILLAR = 3
 
 # --- NEW: MODEL CONFIGURATION ---
 MODEL_CONFIG = {
@@ -474,43 +475,12 @@ def define_llm_chains_p1(api_key, num_angles, model_name):
 
     # --- LLM 2: The Profiler (PROMPT UPDATED from pipeline1_streamlit.py) ---
     profiler_prompt_template = """
-    You are creating a short, embedding-friendly profile of an ideal partner PRODUCT TYPE.
-
-    Your goal: describe the essence of the ideal partner in a **compact, factual, and keyword-rich way**, so it can be used for vector search. Avoid storytelling or long paragraphs.
-
-    Use **bullet points**, and keep the total length under **250 words**.
-
+    You are a brilliant business strategist. Based on the following 'Partnership Strategy', generate a rich, abstract profile of an ideal partner product.
+    Do not invent a name for a product. Describe its features, target users, and core value proposition in detail.
     --- PARTNERSHIP STRATEGY ---
     {strategy_description}
-
-    --- TARGET PRODUCT (for context only) ---
-    {target_doc}
-
-    --- OUTPUT FORMAT (STRICT) ---
-    Return ONLY bullet points in this exact structure (no extra text):
-
-    - Product category: <short phrase>
-    - Clinical focus / condition area: <keywords>
-    - Target users: <roles, e.g. endocrinologists, PCPs, patients with type 2 diabetes>
-    - Data sources: <EHR, claims, lab results, imaging, wearable data, etc.>
-    - Key functionalities: <comma-separated functional keywords>
-    - Tech stack / integration: <APIs, EHR integration, HL7/FHIR, mobile app, cloud platform, etc.>
-    - Typical customers / settings: <hospitals, payers, employers, digital clinics, etc.>
-    """
-
-    profiler_prompt = ChatPromptTemplate.from_template(profiler_prompt_template)
-    profiler_chain = profiler_prompt | llm | StrOutputParser()
-
-    # --- LLM 3: The Initial Scorer (PROMPT UPDATED from pipeline1_streamlit.py) ---
-    scorer_prompt_template = """
-    You are a rapid-assessment business analyst. Assess the synergy potential between the 'Target Product' and the 'Potential Partner' based ONLY on the provided texts.
-    Provide a single score from 1 (low synergy) to 10 (high synergy) and a one-sentence justification.
     --- TARGET PRODUCT ---
     {target_doc}
-    --- POTENTIAL PARTNER CHUNKS ---
-    {candidate_chunks_text}
-    --- OUTPUT FORMAT ---
-    Provide your response as a JSON object with two keys: "score" and "reasoning".
     """
     scorer_prompt = ChatPromptTemplate.from_template(scorer_prompt_template)
     scorer_chain = scorer_prompt | llm | JsonOutputParser()
@@ -577,37 +547,53 @@ def run_pipeline_execution_p1(api_key, merged_data, company_to_products_map, tar
     progress_bar = st.progress(0, text="Starting profiling and retrieval...")
 
     # This loop now reliably gets a string for strategy_desc
+    # This loop now reliably gets a string for strategy_desc
     for i, (strategy_type, strategy_desc) in enumerate(synergy_strategies.items()):
-        progress_bar.progress((i + 1) / (num_angles + 1), text=f"Profiling & Retrieving for: '{strategy_type}'...")
+        progress_bar.progress(
+            (i + 1) / (num_angles + 1),
+            text=f"Profiling & Retrieving for: '{strategy_type}'..."
+        )
 
-        # LLM 2: Profiler
-        hypothetical_doc = profiler_chain.invoke({
-            "strategy_description": strategy_desc, # strategy_desc is now a string
-            "target_doc": clean_target_doc # Use clean doc
-        })
+        # MULTI-QUERY HyDE: generate several hypothetical profiles for the same pillar
+        hyde_queries = []
+        for j in range(NUM_HYDE_QUERIES_PER_PILLAR):
+            hypothetical_doc = profiler_chain.invoke({
+                "strategy_description": strategy_desc,  # strategy_desc is now a string
+                "target_doc": clean_target_doc         # Use clean doc
+            })
+            hyde_queries.append(hypothetical_doc)
 
-        # RAG: Retriever
-        retrieved_docs = custom_retriever(hypothetical_doc)
+        # Use ALL HyDE queries for retrieval, then merge
+        retrieved_docs_all = []
+        for h_doc in hyde_queries:
+            retrieved_docs_all.extend(custom_retriever(h_doc))
 
-        # --- FIX: Self-filtering now uses the NEW 'Product' metadata key ---
+        # De-duplicate and self-filter (no target product)
         filtered_docs = []
-        for doc in retrieved_docs:
-            # Use 'Product' metadata key, normalize it for self-filtering
+        seen_keys = set()
+        for doc in retrieved_docs_all:
             product_meta = doc.metadata.get('Product', '')
-            if product_meta != target_product_input: # Simpler check
-                filtered_docs.append(doc)
-        # --- END FIX ---
+            company_meta = doc.metadata.get('Company', '')
 
+            # Skip the target product itself
+            if product_meta == target_product_input:
+                continue
+
+            # Key for dedup: (company, product, snippet of content)
+            key = (company_meta, product_meta, doc.page_content[:100])
+            if key not in seen_keys:
+                seen_keys.add(key)
+                filtered_docs.append(doc)
+
+        # existing aggregation logic stays the same
         all_retrieved_chunks.extend(filtered_docs)
 
         for doc in filtered_docs:
-            # --- FIX: Consistently use the NEW metadata key 'Product' for product name retrieval ---
             product_name_meta = doc.metadata.get('Product')
-            company_name_meta = doc.metadata.get('Company') # This was already correct
+            company_name_meta = doc.metadata.get('Company')
 
-            # Ensure data is valid before using as key
             if product_name_meta is None or company_name_meta is None:
-                 continue
+                continue
 
             product_key = (company_name_meta, product_name_meta)
 
@@ -617,6 +603,7 @@ def run_pipeline_execution_p1(api_key, merged_data, company_to_products_map, tar
             })
             candidate_product_summary[product_key]['total_chunks'] += 1
             candidate_product_summary[product_key]['angles'][strategy_type] += 1
+
 
     progress_bar.progress(1.0, text="Completed profiling and retrieval.")
     time.sleep(1)
