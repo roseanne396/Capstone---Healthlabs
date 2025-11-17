@@ -11,4 +11,4 @@ chromadb==1.1.1
 langchain-chroma==1.0.0
 gspread
 pandas
-streamlit_gsheets
+st-gsheets-connection
