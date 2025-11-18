@@ -473,58 +473,13 @@ def define_llm_chains_p1(api_key, num_angles, model_name):
 
     # --- LLM 2: The Profiler (PROMPT UPDATED from pipeline1_streamlit.py) ---
     profiler_prompt_template = """
-    You are generating a **synthetic product profile** that will be embedded
-    and used for vector-based retrieval. Your goal is to write a document
-    that looks structurally similar to the product descriptions in the
-    internal HealthLab dataset.
-
-    Write in a ** concise, structured, product-sheet style**, not marketing copy.
-
-    === STYLE REQUIREMENTS ===
-    - Use short factual sentences.
-    - Prefer bullet points over paragraphs.
-    - Include domain-specific terminology and synonyms.
-    - Avoid fluffy language, vision statements, and generic business jargon.
-    - Max length: ~350–450 words.
-
-    === REQUIRED SECTIONS ===
-    (1) **Target Users & Clinical Context**
-        - patient population
-        - disease area / indication
-        - care setting (virtual care, clinic, hospital, home)
-
-    (2) **Product Type & Core Functionality**
-        - what the product DOES (detection? monitoring? workflow automation?)
-        - operational workflows
-        - decision-support or analytics components if relevant
-
-    (3) **Data Sources & Key Integrations**
-        - sensor data, claims, EHR, imaging, patient-reported outcomes, etc.
-        - upload sources, APIs, EMR/EHR systems, integrations
-        - explicit, domain-realistic data fields
-
-    (4) **Technology / Architecture**
-        - models, algorithms, ML/AI, rule-based logic
-        - app/web features
-        - interoperability, standards, HL7/FHIR if applicable
-
-    (5) **Value Proposition (Factual Only)**
-        - operational improvement
-        - clinical improvement
-        - workflow impact
-    (No aspirational phrases — only factual outcomes.)
-
-    === INPUTS ===
-    PARTNERSHIP PILLAR: {strategy_description}
-
-    TARGET PRODUCT (summary of what it supports): 
+    You are a brilliant business strategist. Based on the following 'Partnership Strategy', generate a rich, abstract profile of an ideal partner product.
+    Do not invent a name for a product. Describe its features, target users, and core value proposition in detail.
+    --- PARTNERSHIP STRATEGY ---
+    {strategy_description}
+    --- TARGET PRODUCT ---
     {target_doc}
-
-    === OUTPUT ===
-    Write the synthetic product profile now.
-    Make it dense, realistic, and highly terminological.
     """
-
     profiler_prompt = ChatPromptTemplate.from_template(profiler_prompt_template)
     profiler_chain = profiler_prompt | llm | StrOutputParser()
 
