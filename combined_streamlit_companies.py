@@ -473,23 +473,56 @@ def define_llm_chains_p1(api_key, num_angles, model_name):
 
     # --- LLM 2: The Profiler (PROMPT UPDATED from pipeline1_streamlit.py) ---
     profiler_prompt_template = """
-    You are generating a **synthetic product description** to be used as a search query over a database of digital health products.
-    Write in the same style as a concise internal product profile – factual, dense, and minimal marketing fluff.
+    You are generating a **synthetic product profile** that will be embedded
+    and used for vector-based retrieval. Your goal is to write a document
+    that looks structurally similar to the product descriptions in the
+    internal HealthLab dataset.
 
-    Requirements:
-    - Do NOT invent a product or company name.
-    - Use short sentences and bullet points where appropriate.
-    - Explicitly specify: target users, clinical area, care setting, core features, data sources, and key integrations.
-    - Include important synonyms and related phrases that someone might use to describe this product.
-    - Maximum length: ~400 words.
+    Write in a ** concise, structured, product-sheet style**, not marketing copy.
 
-    --- PARTNERSHIP STRATEGY (what the ideal partner should do) ---
-    {strategy_description}
+    === STYLE REQUIREMENTS ===
+    - Use short factual sentences.
+    - Prefer bullet points over paragraphs.
+    - Include domain-specific terminology and synonyms.
+    - Avoid fluffy language, vision statements, and generic business jargon.
+    - Max length: ~350–450 words.
 
-    --- TARGET PRODUCT (what the current product does) ---
+    === REQUIRED SECTIONS ===
+    (1) **Target Users & Clinical Context**
+        - patient population
+        - disease area / indication
+        - care setting (virtual care, clinic, hospital, home)
+
+    (2) **Product Type & Core Functionality**
+        - what the product DOES (detection? monitoring? workflow automation?)
+        - operational workflows
+        - decision-support or analytics components if relevant
+
+    (3) **Data Sources & Key Integrations**
+        - sensor data, claims, EHR, imaging, patient-reported outcomes, etc.
+        - upload sources, APIs, EMR/EHR systems, integrations
+        - explicit, domain-realistic data fields
+
+    (4) **Technology / Architecture**
+        - models, algorithms, ML/AI, rule-based logic
+        - app/web features
+        - interoperability, standards, HL7/FHIR if applicable
+
+    (5) **Value Proposition (Factual Only)**
+        - operational improvement
+        - clinical improvement
+        - workflow impact
+    (No aspirational phrases — only factual outcomes.)
+
+    === INPUTS ===
+    PARTNERSHIP PILLAR: {strategy_description}
+
+    TARGET PRODUCT (summary of what it supports): 
     {target_doc}
 
-    Write the synthetic product description now.
+    === OUTPUT ===
+    Write the synthetic product profile now.
+    Make it dense, realistic, and highly terminological.
     """
 
     profiler_prompt = ChatPromptTemplate.from_template(profiler_prompt_template)
